@@ -1,0 +1,45 @@
+# Keil files and directories
+UV4
+UV5
+UVopt
+CMSIS
+RTE
+
+# Object files and binaries
+*.o
+*.bin
+*.hex
+
+# Debug files
+*.d
+
+# System files
+*.suo
+*.ncb
+*.user
+*.sdf
+*.opensdf
+
+# Temporary files
+*.tmp
+*.temp
+
+# Backup files
+*~
+
+# Other files
+*.pdb
+*.idb
+*.pch
+*.obj
+
+# Ignore all files in the .vs directory
+.vs/*
+
+# Ignore all files in the Debug and Release directories
+Debug/*
+Release/*
+
+# Ignore all files in the Project/Obj and Project/List directories
+Project/Obj/*
+Project/List/*
