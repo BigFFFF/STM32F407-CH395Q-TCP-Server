@@ -11,33 +11,34 @@
 #define SOCKET_BUFFER_BLOCKS	48
 
 //MSS
-#define MSS_MAX								1460
-#define MSS_MIN								60
-#define MSS_DEFAULT						800
+#define MSS_MAX					1460U
+#define MSS_MIN					60U
+#define MSS_DEFAULT				800U
 
 //错误码
-#define ERR_ETH_VER						11
-#define ERR_ETH_SPI						12
+#define ERR_ETH_VER				11
+#define ERR_ETH_SPI				12
+#define ERR_ETH_INIT			13
 
-#define ERR_SOCKET_MAX				21
+#define ERR_SOCKET_MAX			21
 
-#define ERR_TCP_INIT					31
-#define ERR_TCP_DAIL					32
-#define ERR_TCP_LISTEN				33
-#define ERR_TCP_CLOSE					34
-#define ERR_TCP_BUFF					35
-#define ERR_TCP_RECV					36
+#define ERR_TCP_INIT			31
+#define ERR_TCP_DAIL			32
+#define ERR_TCP_LISTEN			33
+#define ERR_TCP_CLOSE			34
+#define ERR_TCP_BUFF			35
+#define ERR_TCP_RECV			36
 
 //可以修改的接收缓冲区大小，socket最大值，本地端口号，IP地址，网关，子网掩码
-#define RECV_BUFF_LEN 		1460
+#define RECV_BUFF_LEN 			1460U
 #define SOCKET_MAX				8
 #define PORT_LADDR				8080
-#define IP_LADDR					{192,168,1,100}
-#define GATE_WAY					{192,1,1,1}
-#define	IP_MASK						{255,255,255,0}
+#define IP_LADDR				{192,168,1,100}
+#define GATE_WAY				{192,1,1,1}
+#define	IP_MASK					{255,255,255,0}
 
 extern uint8_t recv_buff[RECV_BUFF_LEN];	//存储网络接收的数据
-extern int32_t ch395_status;												//获取中断事件
+extern int32_t ch395_status;							//获取中断事件
 
 //IP
 typedef struct {
@@ -48,14 +49,14 @@ typedef struct {
 
 //Socket
 typedef struct {
-	ip_t			ip;
+	ip_t		ip;
 	uint16_t 	port;												//端口号
 }socket_t, *socket_p;
 
 //TCPServer
 typedef struct {
 	uint8_t		socket_max;									//socket最大值，默认为8，范围0-8
-	socket_t  socket;
+	socket_t  	socket;
 }tcp_t, *tcp_p;
 
 
@@ -101,10 +102,10 @@ void send_data(uint8_t sockindex, uint8_t buf[], uint16_t buf_len);
  
 /*******************************************************************************
 * Description    : 关闭连接
-* Arguments      : tcp_p结构体指针（储存TCP Server配置信息）
+* Arguments      : None
 * Return         : 0为成功
 *******************************************************************************/
-uint8_t close_tcp(const tcp_p tcp);
+uint8_t close_tcp(void);
 
 
 /*******************************************************************************

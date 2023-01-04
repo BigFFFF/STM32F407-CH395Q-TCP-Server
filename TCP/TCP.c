@@ -2,13 +2,13 @@
 #include "delay.h"
 
 uint8_t recv_buff[RECV_BUFF_LEN];	//存储网络接收的数据
-uint8_t buf[20];									//以太网模块临时获取的数据
-int32_t ch395_status = 0;										//获取中断事件
+uint8_t buf[20];					//以太网模块临时获取的数据
+int32_t ch395_status = 0;			//获取中断事件
 
 /*
  * 初始化以太网模块
  */
-static uint8_t init_eth(void) {
+static uint8_t init_eth() {
 	uint8_t retry = 0;
 	
 	//初始化CH395使用的GPIO
@@ -19,8 +19,7 @@ static uint8_t init_eth(void) {
 	mDelaymS(500);
 	
 	/*测试命令，按位取反返回说明测试通过*/
-	while(CH395CMDCheckExist(0x55) != 0xaa)
-	{
+	while(CH395CMDCheckExist(0x55) != 0xaa) {
 		delay_ms(10);
 		if (retry++ > 3) {
 			return ERR_ETH_SPI;
@@ -29,8 +28,7 @@ static uint8_t init_eth(void) {
 	delay_ms(10);
 	
 	//获取芯片版本
-	while((CH395CMDGetVer()) < 0x44)
-	{
+	while((CH395CMDGetVer()) < 0x44) {
 		delay_ms(10);
 		if (retry++ > 6) {
 			return ERR_ETH_VER;
@@ -50,7 +48,7 @@ static uint8_t init_eth(void) {
 static void init_socket_buffer(const tcp_p tcp) {
 	for (int i = 0; i < tcp->socket_max; i++) {
 		/*Socket i*/
-		CH395SetSocketRecvBuf(i, i * 6,			4);
+		CH395SetSocketRecvBuf(i, i * 6,		4);
 		CH395SetSocketSendBuf(i, i * 6 + 4,	2);
 	}
 }
@@ -71,9 +69,9 @@ static void init_ip(const ip_p ip) {
  * 连接TCP
  */
 static uint8_t dail_tcp(const tcp_p tcp) {
-	/*让Socket作为监听连接*/
+	/*让Socket0作为监听连接*/
 	CH395SetSocketProtType(0, PROTO_TYPE_TCP); 		/* 协议类型 */
-	CH395SetSocketSourPort(0, tcp->socket.port);  /* 本地端口号 */
+	CH395SetSocketSourPort(0, tcp->socket.port);  	/* 本地端口号 */
 	if(CH395OpenSocket(0) != 0)                		/* 打开Socket */
 	{
 		return ERR_TCP_DAIL;
@@ -108,14 +106,14 @@ uint8_t listen_tcp(const tcp_p tcp) {
  * 初始化TCP Server
  */
 uint8_t init_tcp_server(const tcp_p tcp) {
-	uint8_t retry = 0;
-	
 	if (tcp->socket_max > 8) {
 		return ERR_SOCKET_MAX;
 	}
 	
-	//初始化以太网模块硬件设置
-	init_eth();
+	//初始化以太网模块硬件设置:成功返回 0
+	if (init_eth() != 0) {
+		return ERR_ETH_INIT;
+	}
 	
 	//初始化TCP SERVER多连接
 	CH395SetStartPara(FUN_PARA_FLAG_TCP_SERVER);
@@ -138,24 +136,19 @@ uint8_t init_tcp_server(const tcp_p tcp) {
 	delay_ms(300);
 	
 	//初始化以太网模块软件设置:成功返回 0
-	while(CH395CMDInitCH395() != 0) {
-		delay_ms(100);
-		if (retry++ > 5) {
-			return ERR_TCP_INIT;
-		}
+	if (CH395CMDInitCH395() != 0) {
+		return ERR_TCP_INIT;
 	}
 	
-	return NULL;
+	return 0;
 }
 
 /*
  * 处理客户端（默认为echo服务器）
  */
-__weak void handle_client(const uint8_t sockindex) {
-	uint8_t  sock_int_socket;
-	
+__weak void handle_client(const uint8_t sockindex) {	
 	/* 获取socket 的中断状态 */
-	sock_int_socket = CH395GetSocketInt(sockindex);
+	uint8_t sock_int_socket = CH395GetSocketInt(sockindex);
 	
 	/* 发送缓冲区空闲，可以继续写入要发送的数据 */
 	if(sock_int_socket & SINT_STAT_SENBUF_FREE) {
@@ -294,7 +287,7 @@ void send_data(uint8_t sockindex, uint8_t buf[], const uint16_t buf_len) {
 /*
  * 关闭连接
  */
-uint8_t close_tcp(const tcp_p tcp) {
+uint8_t close_tcp() {
 	//Socke 0 关闭TCP连接
 	if (CH395TCPDisconnect(0) != 0) {
 		return ERR_TCP_CLOSE;

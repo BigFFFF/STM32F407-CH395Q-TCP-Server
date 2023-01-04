@@ -72,15 +72,23 @@ static void SPI2_Init(void)
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
 	
-	//MOSI---C3, MISO---C2
-	GPIO_InitStructure.GPIO_Pin = CH395_MISO_PIN | CH395_MOSI_PIN;
+	//MOSI---C3
+	GPIO_InitStructure.GPIO_Pin = CH395_MOSI_PIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_UP;
-  GPIO_Init(GPIOC, &GPIO_InitStructure);
+  GPIO_Init(CH395_MOSI_PORT, &GPIO_InitStructure);
+	GPIO_PinAFConfig(CH395_MOSI_PORT, GPIO_PinSource3, GPIO_AF_SPI2);
+	
+	//MISO---C2
+	GPIO_InitStructure.GPIO_Pin = CH395_MISO_PIN;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_UP;
+  GPIO_Init(CH395_MISO_PORT, &GPIO_InitStructure);
 	GPIO_PinAFConfig(CH395_MISO_PORT, GPIO_PinSource2, GPIO_AF_SPI2); 
-	GPIO_PinAFConfig(CH395_MOSI_PORT, GPIO_PinSource3, GPIO_AF_SPI2); 
 	
 	//SCK---B10
 	GPIO_InitStructure.GPIO_Pin = CH395_CLK_PIN;
@@ -88,7 +96,7 @@ static void SPI2_Init(void)
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_UP;
-  GPIO_Init(GPIOB, &GPIO_InitStructure);
+  GPIO_Init(CH395_CLK_PORT, &GPIO_InitStructure);
 	GPIO_PinAFConfig(CH395_CLK_PORT, GPIO_PinSource10, GPIO_AF_SPI2); 
 
 	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
@@ -172,19 +180,15 @@ UINT8 Spi395Exchange( UINT8 d )
 {	
 	/* Loop while DR register in not emplty */
 	while(SPI_I2S_GetFlagStatus(USE_SPI, SPI_I2S_FLAG_TXE) == RESET);	
-	//while( ( USE_SPI->SR & SPI_I2S_FLAG_TXE ) == RESET );
 	
 	/* Send byte through the SPI1 peripheral */
 	SPI_I2S_SendData(USE_SPI, d);
-	//USE_SPI->DR = d;
 
 	/* Wait to receive a byte */
 	while(SPI_I2S_GetFlagStatus(USE_SPI, SPI_I2S_FLAG_RXNE) == RESET);
-	//while( ( USE_SPI->SR & SPI_I2S_FLAG_RXNE ) == RESET );
 
 	/* Return the byte read from the SPI bus */
 	return  SPI_I2S_ReceiveData(USE_SPI);
-	//return( USE_SPI->DR );	
 }
 
 /*******************************************************************************

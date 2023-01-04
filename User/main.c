@@ -27,9 +27,10 @@ int main(void) {
 }
 
 void handld_client(const uint8_t sockindex) {
-	uint16_t len = recv_data(sockindex, recv_buff, RECV_BUFF_LEN);
+	uint8_t buff[RECV_BUFF_LEN];
+	uint16_t len = recv_data(sockindex, buff, RECV_BUFF_LEN);
 		
-	CH395SendData(sockindex, recv_buff, len);
+	send_data(sockindex, buff, len);
 }
 
 
