@@ -17,7 +17,7 @@
 * Output         : None
 * Return         : None
 *******************************************************************************/
-void mDelayuS( UINT32 delay )
+void mDelayuS(UINT32 delay)
 {
 	//替换自己的延时us函数
 	delay_us(delay);
@@ -30,7 +30,7 @@ void mDelayuS( UINT32 delay )
 * Output         : None
 * Return         : None
 *******************************************************************************/
-void mDelaymS( UINT16 delay )
+void mDelaymS(UINT16 delay)
 {
 	//替换自己的延时ms函数
 	delay_ms(delay);
@@ -41,7 +41,7 @@ void mDelaymS( UINT16 delay )
  */
 void W25QXX_DeInit(void)
 {	
-  GPIO_InitTypeDef GPIO_InitStructure;
+	GPIO_InitTypeDef GPIO_InitStructure;
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
 
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;
@@ -51,7 +51,7 @@ void W25QXX_DeInit(void)
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
  	GPIO_Init(GPIOE, &GPIO_InitStructure);
 	
- 	GPIO_SetBits(GPIOE,GPIO_Pin_3);
+ 	GPIO_SetBits(GPIOE, GPIO_Pin_3);
 }
 
 /*******************************************************************************
@@ -64,30 +64,30 @@ void W25QXX_DeInit(void)
 *******************************************************************************/
 static void SPI2_Init(void)
 {
-  SPI_InitTypeDef  SPI_InitStructure;
-  GPIO_InitTypeDef GPIO_InitStructure;
-  SPI_DeInit(SPI2);
+	SPI_InitTypeDef  SPI_InitStructure;
+	GPIO_InitTypeDef GPIO_InitStructure;
+	SPI_DeInit(SPI2);
 	
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
-  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
 	
 	//MOSI---C3
 	GPIO_InitStructure.GPIO_Pin = CH395_MOSI_PIN;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_UP;
-  GPIO_Init(CH395_MOSI_PORT, &GPIO_InitStructure);
+	GPIO_Init(CH395_MOSI_PORT, &GPIO_InitStructure);
 	GPIO_PinAFConfig(CH395_MOSI_PORT, GPIO_PinSource3, GPIO_AF_SPI2);
 	
 	//MISO---C2
 	GPIO_InitStructure.GPIO_Pin = CH395_MISO_PIN;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_UP;
-  GPIO_Init(CH395_MISO_PORT, &GPIO_InitStructure);
+	GPIO_Init(CH395_MISO_PORT, &GPIO_InitStructure);
 	GPIO_PinAFConfig(CH395_MISO_PORT, GPIO_PinSource2, GPIO_AF_SPI2); 
 	
 	//SCK---B10
@@ -96,7 +96,7 @@ static void SPI2_Init(void)
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_UP;
-  GPIO_Init(CH395_CLK_PORT, &GPIO_InitStructure);
+	GPIO_Init(CH395_CLK_PORT, &GPIO_InitStructure);
 	GPIO_PinAFConfig(CH395_CLK_PORT, GPIO_PinSource10, GPIO_AF_SPI2); 
 
 	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
@@ -138,21 +138,21 @@ void CH395_PORT_INIT( void )
 	GPIO_InitStructure.GPIO_Mode =  GPIO_Mode_OUT;/* 推拉输出备用功能 */
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-	GPIO_Init( CH395_CS_PORT, &GPIO_InitStructure);
+	GPIO_Init(CH395_CS_PORT, &GPIO_InitStructure);
 	
 	// Configure pins: TX
 	GPIO_InitStructure.GPIO_Pin = CH395_TX_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode =  GPIO_Mode_OUT;/* 推拉输出备用功能 */
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-	GPIO_Init( CH395_TX_PORT, &GPIO_InitStructure);
+	GPIO_Init(CH395_TX_PORT, &GPIO_InitStructure);
 	
 	// Configure pins: RST
 	GPIO_InitStructure.GPIO_Pin = CH395_RST_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode =  GPIO_Mode_OUT;/* 推拉输出备用功能 */
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-	GPIO_Init( CH395_RST_PORT, &GPIO_InitStructure);
+	GPIO_Init(CH395_RST_PORT, &GPIO_InitStructure);
 	
 	//TX low
 	CH395_TX_PIN_LOW();
@@ -166,7 +166,7 @@ void CH395_PORT_INIT( void )
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;  				 /* 上拉输入 */
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_UP;
-	GPIO_Init( CH395_INT_PORT, &GPIO_InitStructure );		
+	GPIO_Init(CH395_INT_PORT, &GPIO_InitStructure );		
 }
 
 /*******************************************************************************
@@ -179,16 +179,16 @@ void CH395_PORT_INIT( void )
 UINT8 Spi395Exchange( UINT8 d )  
 {	
 	/* Loop while DR register in not emplty */
-	while(SPI_I2S_GetFlagStatus(USE_SPI, SPI_I2S_FLAG_TXE) == RESET);	
+	while (SPI_I2S_GetFlagStatus(USE_SPI, SPI_I2S_FLAG_TXE) == RESET);	
 	
 	/* Send byte through the SPI1 peripheral */
 	SPI_I2S_SendData(USE_SPI, d);
 
 	/* Wait to receive a byte */
-	while(SPI_I2S_GetFlagStatus(USE_SPI, SPI_I2S_FLAG_RXNE) == RESET);
+	while (SPI_I2S_GetFlagStatus(USE_SPI, SPI_I2S_FLAG_RXNE) == RESET);
 
 	/* Return the byte read from the SPI bus */
-	return  SPI_I2S_ReceiveData(USE_SPI);
+	return SPI_I2S_ReceiveData(USE_SPI);
 }
 
 /*******************************************************************************
@@ -198,16 +198,16 @@ UINT8 Spi395Exchange( UINT8 d )
 * Output         : None
 * Return         : None
 *******************************************************************************/
-void xWriteCH395Cmd( UINT8 mCmd )  
+void xWriteCH395Cmd(UINT8 mCmd)  
 {
 	CH395_SPI_CS_HIGH();  									 /* 防止之前未通过xEndCH395Cmd禁止SPI片选 */
-	mDelayuS( 1 );
+	mDelayuS(1);
 	/* 对于双向I/O引脚模拟SPI接口,那么必须确保已经设置SPI_SCS,SPI_SCK,SPI_SDI为输出方向,SPI_SDO为输入方向 */
 	CH395_SPI_CS_LOW();  										 /* SPI片选有效 */
 	
 	/* 发送命令码 */
-	Spi395Exchange( mCmd );  									 /* 发出命令码 */
-	mDelayuS( 2 );  											 /* 延时1.5uS确保读写周期大于1.5uS */
+	Spi395Exchange(mCmd);  									 /* 发出命令码 */
+	mDelayuS(2);  											 /* 延时1.5uS确保读写周期大于1.5uS */
 }
 
 /*******************************************************************************
@@ -217,9 +217,9 @@ void xWriteCH395Cmd( UINT8 mCmd )
 * Output         : None
 * Return         : None
 *******************************************************************************/
-void xWriteCH395Data( UINT8 mData ) 
+void xWriteCH395Data(UINT8 mData) 
 {
-	Spi395Exchange( mData );  									 /* 发送数据 */
+	Spi395Exchange(mData);  									 /* 发送数据 */
 
 }
 
@@ -232,7 +232,7 @@ void xWriteCH395Data( UINT8 mData )
 *******************************************************************************/
 UINT8 xReadCH395Data( void ) 
 {
-	return( Spi395Exchange( 0xFF ) );  	
+	return(Spi395Exchange(0xFF));  	
 }
 
 #define	xEndCH395Cmd()	CH395_SPI_CS_HIGH()  			 /* SPI片选无效,结束CH395命令,仅用于SPI接口方式 */
@@ -246,7 +246,7 @@ UINT8 xReadCH395Data( void )
 *******************************************************************************/
 UINT8 Query395Interrupt( void )
 {
-	return( CH395_INT_PIN_INPUT() ? FALSE : TRUE );  
+	return(CH395_INT_PIN_INPUT() ? FALSE : TRUE);  
 }
 
 /*******************************************************************************

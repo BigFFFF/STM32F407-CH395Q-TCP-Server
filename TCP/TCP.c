@@ -68,20 +68,20 @@ static void init_ip(const ip_p ip) {
 /*
  * 连接TCP
  */
-static uint8_t dail_tcp(const tcp_p tcp) {
-	/*让Socket0作为监听连接*/
-	CH395SetSocketProtType(0, PROTO_TYPE_TCP); 		/* 协议类型 */
-	CH395SetSocketSourPort(0, tcp->socket.port);  	/* 本地端口号 */
-	if(CH395OpenSocket(0) != 0)                		/* 打开Socket */
+static uint8_t dail_tcp(const listen_p listen) {
+	/*让listen->socketi作为监听连接*/
+	CH395SetSocketProtType(listen->socketi, PROTO_TYPE_TCP); 		/* 协议类型 */
+	CH395SetSocketSourPort(listen->socketi, listen->port); 		/* 本地端口号 */
+	if(CH395OpenSocket(listen->socketi) != 0)                		/* 打开Socket */
 	{
 		return ERR_TCP_DAIL;
 	}
 	
-	for (int i = 1; i < tcp->socket_max; i++) {
+	for (int i = listen->socketi + 1; i < listen->socketi + 1 + listen->connect_num; i++) {
 		/*其它Socket作为数据通信*/
 		/*想要几路Socket客户端连接通信,就需要配置几个Socket,所以模块最多支持7个Socket TCP客户端通信*/
-		CH395SetSocketProtType(i, PROTO_TYPE_TCP); 							/* 协议类型 */
-		CH395SetSocketSourPort(i, tcp->socket.port);						/* 本地端口号 */
+		CH395SetSocketProtType(i, PROTO_TYPE_TCP); 						/* 协议类型 */
+		CH395SetSocketSourPort(i, listen->port);						/* 本地端口号 */
 	}
 	
 	return 0;
@@ -90,13 +90,13 @@ static uint8_t dail_tcp(const tcp_p tcp) {
 /*
  * 启动TCP Server监听
  */
-uint8_t listen_tcp(const tcp_p tcp) {
+uint8_t listen_tcp(const listen_p listen) {
 	/*配置模块启动Socket监听*/
-	if (dail_tcp(tcp) != 0) {
+	if (dail_tcp(listen) != 0) {
 		return ERR_TCP_DAIL;
 	}
-	//Socke 0 启动TCP监听
-	if (CH395TCPListen(0) != 0) {
+	//listen->socketi 启动TCP监听
+	if (CH395TCPListen(listen->socketi) != 0) {
 		return ERR_TCP_LISTEN;
 	}
 	return 0;
@@ -132,7 +132,7 @@ uint8_t init_tcp_server(const tcp_p tcp) {
 	delay_ms(100);
 	
 	//初始化IP
-	init_ip(&tcp->socket.ip);
+	init_ip(&tcp->ip);
 	delay_ms(300);
 	
 	//初始化以太网模块软件设置:成功返回 0
@@ -181,10 +181,10 @@ __weak void handle_client(const uint8_t sockindex) {
 	
 	/* 连接中断，仅在TCP模式下有效*/
 	if(sock_int_socket & SINT_STAT_CONNECT) {
-//		printf("socket%d SINT_STAT_CONNECT\r\n",sockindex);
-//		CH395CMDGetRemoteIPP(sockindex,buf);//获取客户端信息
-//		printf("IP address = %d.%d.%d.%d\n",(UINT16)buf[0],(UINT16)buf[1],(UINT16)buf[2],(UINT16)buf[3]);    
-//		printf("Port = %d\n",((buf[5]<<8) + buf[4]));
+//		CH395CMDGetRemoteIPP(sockindex, buf);//获取客户端信息
+//		socket_t socket = {
+//			.port = (buf[5]<<8) + buf[4],
+//			.ip_addr = {(uint16_t)buf[0], (uint16_t)buf[1], (uint16_t)buf[2], (uint16_t)buf[3]}};
 	}
 	
 	/* 断开中断，仅在TCP模式下有效 */
@@ -201,7 +201,7 @@ __weak void handle_client(const uint8_t sockindex) {
 /*
  * 处理INT中断引脚（包括处理客户端）
  */
-__weak void handle_INT(tcp_p tcp, void(*handle_client_p)(const uint8_t sockindex)) {
+__weak void handle_INT(tcp_p tcp) {
 	ch395_status = CH395CMDGetGlobIntStatus_ALL();
 	
 	//处理PHY改变中断
@@ -223,20 +223,14 @@ __weak void handle_INT(tcp_p tcp, void(*handle_client_p)(const uint8_t sockindex
 	
 	/* 处理IP冲突中断，建议重新修改CH395的 IP，并初始化CH395*/
 	if(ch395_status & GINT_STAT_IP_CONFLI) {
-		static uint8_t ip_addr_3 = 1; 
-		
-		tcp->socket.ip.ip_addr[3] += ip_addr_3++;
-		init_tcp_server(tcp);
-		listen_tcp(tcp);
-		
-		return;
+
 	}
 	
 	/* 处理 SOCKi 中断 */
 	for(int i = 0; i < tcp->socket_max; i++) {
 		//if(ch395_status & GINT_STAT_SOCK0){}
 		if(ch395_status & (1 << (4 + i))) {
-			(*handle_client_p)(i);
+			handle_client(i);
 		}
 	}
 }
@@ -247,14 +241,14 @@ __weak void handle_INT(tcp_p tcp, void(*handle_client_p)(const uint8_t sockindex
 __weak void process_tcp_server(const tcp_p tcp) {
 	//INT引脚产生低电平中断以后进去判断
 	if(Query395Interrupt()) {
-		handle_INT(tcp, handle_client);
+		handle_INT(tcp);
 	}
 }
 
 /*
  * 数据接收（中断）
  */
-uint8_t recv_data(uint8_t sockindex, uint8_t buf[], uint16_t buf_len) {
+uint16_t recv_data(uint8_t sockindex, uint8_t buf[], uint16_t buf_len) {
 	if(!(CH395GetSocketInt(sockindex) & SINT_STAT_RECV)) {
 		return 0;
 	}
@@ -266,7 +260,7 @@ uint8_t recv_data(uint8_t sockindex, uint8_t buf[], uint16_t buf_len) {
 	if(len > RECV_BUFF_LEN) {
 		len = RECV_BUFF_LEN;
 	}
-	
+
 	if(buf_len >= RECV_BUFF_LEN) {
 		buf_len = len;
 	}
