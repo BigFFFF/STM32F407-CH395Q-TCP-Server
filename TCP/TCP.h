@@ -48,10 +48,6 @@
 #define CONNECT_NUM_1			1
 #define CONNECT_NUM_2			1
 
-extern uint8_t 	recv_buff[RECV_BUFF_LEN];			//接收缓冲区
-extern volatile uint8_t socket_int[SOCKET_MAX];		//socket中断状态
-extern volatile int32_t ch395_status;				//CH395中断状态
-
 //IP
 typedef struct {
 	uint8_t  	ip_addr[4];               			//IP地址
@@ -80,6 +76,11 @@ typedef struct {
 	uint8_t		socket_max;							//socket最大值
 	uint8_t		socket_listen_max;					//socket监听端口最大值
 }tcp_t, *tcp_p;
+
+
+extern uint8_t 				recv_buff[RECV_BUFF_LEN];	//接收缓冲区
+extern volatile uint8_t 	socket_int[SOCKET_MAX];		//socket中断状态
+extern volatile uint16_t 	ch395_status;				//CH395中断状态
 
 
 /*******************************************************************************

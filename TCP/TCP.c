@@ -1,9 +1,9 @@
 #include "TCP.h"
 #include "delay.h"
 
-uint8_t recv_buff[RECV_BUFF_LEN];			//接收缓存区
-volatile uint8_t socket_int[SOCKET_MAX];	//socket中断状态
-volatile int32_t ch395_status = 0;			//CH395中断状态
+uint8_t 			recv_buff[RECV_BUFF_LEN];	//接收缓存区
+volatile uint8_t 	socket_int[SOCKET_MAX];		//socket中断状态
+volatile uint16_t 	ch395_status = 0;			//CH395中断状态
 
 /*
  * 初始化以太网模块
@@ -183,24 +183,44 @@ uint8_t init_tcp_server(const tcp_p tcp) {
 }
 
 /*
+ * 运行TCP Server（轮询）（包括所有中断）
+ */
+void process_tcp_server(const tcp_p tcp) {
+	//INT引脚产生低电平中断以后进去判断
+	if(Query395Interrupt()) {
+		ch395_status = CH395CMDGetGlobIntStatus_ALL();
+		handle_INT(tcp);
+	}
+}
+
+/*
+ * 监听端口接收（包括处理客户端）
+ */
+void listen_accept(listen_p listen,  void(*handle_client_p)(const uint8_t sockindex)) {
+	for(int i = listen->socketi; i <= listen->socketi + listen->connect_num; i++) {
+		if(ch395_status & (1 << (4 + i))) {
+			socket_int[i] = CH395GetSocketInt(i);
+			(*handle_client_p)(i);
+		}
+	}
+}
+
+/*
  * 处理客户端（默认为echo服务器）
  */
-__weak void handle_client(const uint8_t sockindex) {	
-	/* 获取socket 的中断状态 */
-	uint8_t sock_int_socket = CH395GetSocketInt(sockindex);
-	
-	/* 发送缓冲区空闲，可以继续写入要发送的数据 */
-	if(sock_int_socket & SINT_STAT_SENBUF_FREE) {
+void handle_client(const uint8_t sockindex) {	
+	/* 发送完成中断 */
+	if(socket_int[sockindex] & SINT_STAT_SEND_OK) {
 		
 	}
 	
-	/* 发送完成中断 */
-	if(sock_int_socket & SINT_STAT_SEND_OK) {
+	/* 发送缓冲区空闲，可以继续写入要发送的数据 */
+	if(socket_int[sockindex] & SINT_STAT_SENBUF_FREE) {
 		
 	}
 	
 	/* 接收数据中断 */
-	if(sock_int_socket & SINT_STAT_RECV) {
+	if(socket_int[sockindex] & SINT_STAT_RECV) {
 		uint16_t len = CH395GetRecvLength(sockindex);/* 获取当前缓冲区内数据长度 */
 		
 		if(len == 0) {
@@ -214,38 +234,23 @@ __weak void handle_client(const uint8_t sockindex) {
 		/* 读取数据 */
 		CH395GetRecvData(sockindex, len, recv_buff);
 		
-		/* 把接收的数据发送给服务器 */
+		/* 发送数据 */
 		CH395SendData(sockindex, recv_buff, len);
 	}
 	
 	/* 连接中断，仅在TCP模式下有效 */
-	if(sock_int_socket & SINT_STAT_CONNECT) {
-//		CH395CMDGetRemoteIPP(sockindex, buf);//获取客户端信息
-//		socket_t socket = {
-//			.socketi = sockindex,
-//			.port = (buf[5]<<8) + buf[4],
-//			.ip_addr = {(uint16_t)buf[0], (uint16_t)buf[1], (uint16_t)buf[2], (uint16_t)buf[3]}};
+	if(socket_int[sockindex] & SINT_STAT_CONNECT) {
+
 	}
 	
 	/* 断开中断，仅在TCP模式下有效 */
-	if(sock_int_socket & SINT_STAT_DISCONNECT) {
+	if(socket_int[sockindex] & SINT_STAT_DISCONNECT) {
 
 	}
  
 	/* 超时中断，仅在TCP模式下有效 */
-	if(sock_int_socket & SINT_STAT_TIM_OUT) {
+	if(socket_int[sockindex] & SINT_STAT_TIM_OUT) {
 
-	}
-}
-
-/*
- * 监听端口接收（包括处理客户端）
- */
-void listen_accept(listen_p listen,  void(*handle_client_p)(const uint8_t sockindex)) {
-	for(int i = listen->socketi; i <= listen->socketi + listen->connect_num; i++) {
-		if(ch395_status & (1 << (4 + i))) {
-			(*handle_client_p)(i);
-		}
 	}
 }
 
@@ -253,15 +258,13 @@ void listen_accept(listen_p listen,  void(*handle_client_p)(const uint8_t sockin
  * 处理INT中断引脚（包括处理监听的端口）
  */
 __weak void handle_INT(tcp_p tcp) {
-	ch395_status = CH395CMDGetGlobIntStatus_ALL();
-	
-	//处理PHY改变中断
+	/* 处理PHY改变中断 */
 	if(ch395_status & GINT_STAT_PHY_CHANGE) {
-		//网线断开
+		/* 网线断开 */
 		if(CH395CMDGetPHYStatus() == PHY_DISCONN) {
 
 		}
-		//网线连接
+		/* 网线连接 */
 		else {
 
 		}
@@ -269,8 +272,7 @@ __weak void handle_INT(tcp_p tcp) {
 	
 	/* 处理不可达中断，读取不可达信息 */
 	if(ch395_status & GINT_STAT_UNREACH) {
-//		uint8_t info[20];
-//		CH395CMDGetUnreachIPPT(info);
+
 	}
 	
 	/* 处理IP冲突中断，建议重新修改CH395的 IP，并初始化CH395*/
@@ -279,16 +281,6 @@ __weak void handle_INT(tcp_p tcp) {
 	}
 	/* 处理 监听到的客户端 中断 */
 	listen_accept(&tcp->listen[0], handle_client);
-}
-
-/*
- * 运行TCP Server（轮询）（包括所有中断）
- */
-__weak void process_tcp_server(const tcp_p tcp) {
-	//INT引脚产生低电平中断以后进去判断
-	if(Query395Interrupt()) {
-		handle_INT(tcp);
-	}
 }
 
 /*
@@ -322,10 +314,6 @@ uint16_t recv_data(const uint8_t sockindex, uint8_t buf[], uint16_t buf_len) {
  * 数据发送
  */
 uint16_t send_data(const uint8_t sockindex, uint8_t buf[], const uint16_t buf_len) {
-	//发送缓冲区空闲，可以继续写入要发送的数据
-	if (!socket_int[sockindex] & SINT_STAT_SENBUF_FREE) {
-		return 0;
-	}
 	CH395SendData(sockindex, buf, buf_len);
 	return buf_len;
 }

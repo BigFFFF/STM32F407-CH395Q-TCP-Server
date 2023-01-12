@@ -46,26 +46,21 @@ void handle_client_0(const uint8_t sockindex) {
 }
 
 void handle_client_1(const uint8_t sockindex) {
-	socket_int[sockindex] = CH395GetSocketInt(sockindex);
-	
 	uint16_t len = recv_data(sockindex, recv_buff, RECV_BUFF_LEN);
 	send_data(sockindex, recv_buff, len);
 }
 
 void handle_client_2(const uint8_t sockindex) {
-	socket_int[sockindex] = CH395GetSocketInt(sockindex);
+	uint8_t buff[RECV_BUFF_LEN];
 	
-	uint16_t len = recv_data(sockindex, recv_buff, RECV_BUFF_LEN);
-	send_data(sockindex, recv_buff, len);
+	uint16_t len = recv_data(sockindex, buff, RECV_BUFF_LEN);
+	send_data(sockindex, buff, len);
 }
 
 /*
  * 处理INT中断引脚（包括处理监听客户端）
  */
 void handle_INT(tcp_p tcp) {
-	//获取CH395中断事件
-	ch395_status = CH395CMDGetGlobIntStatus_ALL();
-	
 	//根据监听端口的不同，提供不同的客户端中断处理方式
 	listen_accept(&tcp->listen[0], handle_client_0);
 	listen_accept(&tcp->listen[1], handle_client_1);
