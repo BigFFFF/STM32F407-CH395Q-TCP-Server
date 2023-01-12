@@ -1,9 +1,9 @@
 #include "TCP.h"
 #include "delay.h"
 
-uint8_t recv_buff[RECV_BUFF_LEN];	//存储网络接收的数据
-uint8_t buf[20];					//以太网模块临时获取的数据
-int32_t ch395_status = 0;			//获取中断事件
+uint8_t recv_buff[RECV_BUFF_LEN];			//接收缓存区
+volatile uint8_t socket_int[SOCKET_MAX];	//socket中断状态
+volatile int32_t ch395_status = 0;			//CH395中断状态
 
 /*
  * 初始化以太网模块
@@ -71,7 +71,7 @@ static void init_ip(const ip_p ip) {
 static uint8_t dail_tcp(const listen_p listen) {
 	/*让listen->socketi作为监听连接*/
 	CH395SetSocketProtType(listen->socketi, PROTO_TYPE_TCP); 		/* 协议类型 */
-	CH395SetSocketSourPort(listen->socketi, listen->port); 		/* 本地端口号 */
+	CH395SetSocketSourPort(listen->socketi, listen->port); 			/* 本地端口号 */
 	if(CH395OpenSocket(listen->socketi) != 0)                		/* 打开Socket */
 	{
 		return ERR_TCP_DAIL;
@@ -102,15 +102,51 @@ uint8_t listen_tcp(const listen_p listen) {
 	return 0;
 }
 
+
+/*
+ * 检查TCP最基本的配置
+ */
+uint8_t check_tcp_config(const tcp_p tcp) {
+	if (tcp == NULL) {
+		return ERR_TCP_CONFIG;
+	}
+	if (tcp->socket_max > 8 || tcp->socket_max == 0) {
+		return ERR_TCP_CONFIG;
+	}
+	if (tcp->socket_listen_max > 4 || tcp->socket_listen_max == 0) {
+		return ERR_TCP_CONFIG;
+	}
+	if (tcp->ip.ip_addr[0] == 0 && tcp->ip.ip_addr[1] == 0 && tcp->ip.ip_addr[2] == 0 && tcp->ip.ip_addr[3] == 0) {
+		return ERR_TCP_CONFIG;
+	}
+	if (tcp->ip.ip_mask[0] == 0 && tcp->ip.ip_mask[1] == 0 && tcp->ip.ip_mask[2] == 0 && tcp->ip.ip_mask[3] == 0) {
+		return ERR_TCP_CONFIG;
+	}
+	if (&tcp->listen[0] == NULL) {
+		return ERR_TCP_CONFIG;
+	}
+	if (tcp->listen[0].connect_num == 0) {
+		return ERR_TCP_CONFIG;
+	}
+	if (tcp->listen[0].port == 0) {
+		return ERR_TCP_CONFIG;
+	}
+	if (tcp->listen[0].socketi != 0) {
+		return ERR_TCP_CONFIG;
+	}
+	return 0;
+}
+
 /*
  * 初始化TCP Server
  */
 uint8_t init_tcp_server(const tcp_p tcp) {
-	if (tcp->socket_max > 8) {
-		return ERR_SOCKET_MAX;
+	//检查TCP的基本配置
+	if (check_tcp_config(tcp) != 0) {
+		return ERR_TCP_CONFIG;
 	}
 	
-	//初始化以太网模块硬件设置:成功返回 0
+	//初始化以太网模块硬件设置
 	if (init_eth() != 0) {
 		return ERR_ETH_INIT;
 	}
@@ -129,13 +165,16 @@ uint8_t init_tcp_server(const tcp_p tcp) {
 	if (tcp->socket_max <= 4) {
 		CH395SetTCPMss(MSS_MAX);
 	}
+	else {
+		CH395SetTCPMss(MSS_DEFAULT);
+	}
 	delay_ms(100);
 	
 	//初始化IP
 	init_ip(&tcp->ip);
 	delay_ms(300);
 	
-	//初始化以太网模块软件设置:成功返回 0
+	//初始化以太网模块软件设置
 	if (CH395CMDInitCH395() != 0) {
 		return ERR_TCP_INIT;
 	}
@@ -173,16 +212,17 @@ __weak void handle_client(const uint8_t sockindex) {
 		}
 		
 		/* 读取数据 */
-		CH395GetRecvData(sockindex,len,recv_buff);
+		CH395GetRecvData(sockindex, len, recv_buff);
 		
-		/*把接收的数据发送给服务器*/
-		CH395SendData(sockindex,recv_buff,len);
+		/* 把接收的数据发送给服务器 */
+		CH395SendData(sockindex, recv_buff, len);
 	}
 	
-	/* 连接中断，仅在TCP模式下有效*/
+	/* 连接中断，仅在TCP模式下有效 */
 	if(sock_int_socket & SINT_STAT_CONNECT) {
 //		CH395CMDGetRemoteIPP(sockindex, buf);//获取客户端信息
 //		socket_t socket = {
+//			.socketi = sockindex,
 //			.port = (buf[5]<<8) + buf[4],
 //			.ip_addr = {(uint16_t)buf[0], (uint16_t)buf[1], (uint16_t)buf[2], (uint16_t)buf[3]}};
 	}
@@ -192,14 +232,25 @@ __weak void handle_client(const uint8_t sockindex) {
 
 	}
  
-	/* 超时中断，仅在TCP模式下有效*/
+	/* 超时中断，仅在TCP模式下有效 */
 	if(sock_int_socket & SINT_STAT_TIM_OUT) {
 
 	}
 }
 
 /*
- * 处理INT中断引脚（包括处理客户端）
+ * 监听端口接收（包括处理客户端）
+ */
+void listen_accept(listen_p listen,  void(*handle_client_p)(const uint8_t sockindex)) {
+	for(int i = listen->socketi; i <= listen->socketi + listen->connect_num; i++) {
+		if(ch395_status & (1 << (4 + i))) {
+			(*handle_client_p)(i);
+		}
+	}
+}
+
+/*
+ * 处理INT中断引脚（包括处理监听的端口）
  */
 __weak void handle_INT(tcp_p tcp) {
 	ch395_status = CH395CMDGetGlobIntStatus_ALL();
@@ -218,21 +269,16 @@ __weak void handle_INT(tcp_p tcp) {
 	
 	/* 处理不可达中断，读取不可达信息 */
 	if(ch395_status & GINT_STAT_UNREACH) {
-		CH395CMDGetUnreachIPPT(buf);
+//		uint8_t info[20];
+//		CH395CMDGetUnreachIPPT(info);
 	}
 	
 	/* 处理IP冲突中断，建议重新修改CH395的 IP，并初始化CH395*/
 	if(ch395_status & GINT_STAT_IP_CONFLI) {
 
 	}
-	
-	/* 处理 SOCKi 中断 */
-	for(int i = 0; i < tcp->socket_max; i++) {
-		//if(ch395_status & GINT_STAT_SOCK0){}
-		if(ch395_status & (1 << (4 + i))) {
-			handle_client(i);
-		}
-	}
+	/* 处理 监听到的客户端 中断 */
+	listen_accept(&tcp->listen[0], handle_client);
 }
 
 /*
@@ -248,8 +294,9 @@ __weak void process_tcp_server(const tcp_p tcp) {
 /*
  * 数据接收（中断）
  */
-uint16_t recv_data(uint8_t sockindex, uint8_t buf[], uint16_t buf_len) {
-	if(!(CH395GetSocketInt(sockindex) & SINT_STAT_RECV)) {
+uint16_t recv_data(const uint8_t sockindex, uint8_t buf[], uint16_t buf_len) {
+	//socket端口接收到数据或者接收缓冲区不为空
+	if(!(socket_int[sockindex] & SINT_STAT_RECV)) {
 		return 0;
 	}
 	
@@ -274,16 +321,21 @@ uint16_t recv_data(uint8_t sockindex, uint8_t buf[], uint16_t buf_len) {
 /*
  * 数据发送
  */
-void send_data(uint8_t sockindex, uint8_t buf[], const uint16_t buf_len) {
+uint16_t send_data(const uint8_t sockindex, uint8_t buf[], const uint16_t buf_len) {
+	//发送缓冲区空闲，可以继续写入要发送的数据
+	if (!socket_int[sockindex] & SINT_STAT_SENBUF_FREE) {
+		return 0;
+	}
 	CH395SendData(sockindex, buf, buf_len);
+	return buf_len;
 }
 
 /*
  * 关闭连接
  */
-uint8_t close_tcp() {
+uint8_t close_tcp(const uint8_t sockindex) {
 	//Socke 0 关闭TCP连接
-	if (CH395TCPDisconnect(0) != 0) {
+	if (CH395TCPDisconnect(sockindex) != 0) {
 		return ERR_TCP_CLOSE;
 	}
 	return 0;

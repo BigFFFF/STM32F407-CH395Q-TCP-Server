@@ -587,7 +587,7 @@ UINT8  CH395OpenSocket(UINT8 sockindex)
 }
 
 /*******************************************************************************
-* Function Name  : CH395OpenSocket
+* Function Name  : CH395CloseSocket
 * Description    : ¹Ø±Õsocket£¬
 * Input          : sockindex SocketË÷Òý
 * Output         : None

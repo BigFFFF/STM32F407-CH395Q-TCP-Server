@@ -13,21 +13,20 @@
 //MSS
 #define MSS_MAX					1460
 #define MSS_MIN					60
-#define MSS_DEFAULT				800
+#define MSS_DEFAULT				980
 
 //错误码
 #define ERR_ETH_VER				11
 #define ERR_ETH_SPI				12
 #define ERR_ETH_INIT			13
 
-#define ERR_SOCKET_MAX			21
-
-#define ERR_TCP_INIT			31
-#define ERR_TCP_DAIL			32
-#define ERR_TCP_LISTEN			33
-#define ERR_TCP_CLOSE			34
-#define ERR_TCP_BUFF			35
-#define ERR_TCP_RECV			36
+#define ERR_TCP_CONFIG			21
+#define ERR_TCP_INIT			22
+#define ERR_TCP_DAIL			23
+#define ERR_TCP_LISTEN			24
+#define ERR_TCP_CLOSE			25
+#define ERR_TCP_BUFF			26
+#define ERR_TCP_RECV			27
 
 //可以修改的接收缓冲区大小，socket最大值，本地端口号，IP地址，网关，子网掩码
 #define RECV_BUFF_LEN 			1460
@@ -49,8 +48,9 @@
 #define CONNECT_NUM_1			1
 #define CONNECT_NUM_2			1
 
-extern uint8_t recv_buff[RECV_BUFF_LEN];			//存储网络接收的数据
-extern int32_t ch395_status;						//获取中断事件
+extern uint8_t 	recv_buff[RECV_BUFF_LEN];			//接收缓冲区
+extern volatile uint8_t socket_int[SOCKET_MAX];		//socket中断状态
+extern volatile int32_t ch395_status;				//CH395中断状态
 
 //IP
 typedef struct {
@@ -111,23 +111,23 @@ void process_tcp_server(const tcp_p tcp);
 * Arguments      : socket索引号，缓冲区，数据长度（长度大于等于RECV_BUFF_LEN时，不定长接收）
 * Return         : 实际接收的数据长度
 *******************************************************************************/
-uint16_t recv_data(uint8_t sockindex, uint8_t buf[], uint16_t buf_len);
+uint16_t recv_data(const uint8_t sockindex, uint8_t buf[], uint16_t buf_len);
  
 
 /*******************************************************************************
 * Description    : 数据发送
 * Arguments      : socket索引号，缓冲区，数据长度
-* Return         : None
+* Return         : 实际发送的数据长度
 *******************************************************************************/
-void send_data(uint8_t sockindex, uint8_t buf[], uint16_t buf_len);
+uint16_t send_data(const uint8_t sockindex, uint8_t buf[], uint16_t buf_len);
  
  
 /*******************************************************************************
 * Description    : 关闭连接
-* Arguments      : None
+* Arguments      : socket索引号
 * Return         : 0为成功
 *******************************************************************************/
-uint8_t close_tcp(void);
+uint8_t close_tcp(const uint8_t sockindex);
 
 
 /*******************************************************************************
@@ -139,7 +139,15 @@ void handle_client(const uint8_t sockindex);
 
 
 /*******************************************************************************
-* Description    : 处理INT中断引脚（包括处理客户端）
+* Description    : 监听接收（包括处理客户端）
+* Arguments      : listen_p结构体指针，*handle_client_p函数指针（指定客户端处理函数）
+* Return         : None
+*******************************************************************************/
+void listen_accept(listen_p listen,  void(*handle_client_p)(const uint8_t sockindex));
+
+
+/*******************************************************************************
+* Description    : 处理INT中断引脚（包括处理监听端口）
 * Arguments      : tcp_p结构体指针（储存TCP Server配置信息）
 * Return         : None
 *******************************************************************************/
