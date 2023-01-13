@@ -162,12 +162,7 @@ uint8_t init_tcp_server(const tcp_p tcp) {
 	delay_ms(100);
 	
 	//重置TCP MSS
-	if (tcp->socket_max <= 4) {
-		CH395SetTCPMss(MSS_MAX);
-	}
-	else {
-		CH395SetTCPMss(MSS_DEFAULT);
-	}
+	CH395SetTCPMss(MSS_DEFAULT);
 	delay_ms(100);
 	
 	//初始化IP
@@ -313,7 +308,10 @@ uint16_t recv_data(const uint8_t sockindex, uint8_t buf[], uint16_t buf_len) {
 /*
  * 数据发送
  */
-uint16_t send_data(const uint8_t sockindex, uint8_t buf[], const uint16_t buf_len) {
+uint16_t send_data(const uint8_t sockindex, uint8_t buf[], uint16_t buf_len) {
+	if (buf_len > MSS_DEFAULT) {
+		buf_len = MSS_DEFAULT;
+	}
 	CH395SendData(sockindex, buf, buf_len);
 	return buf_len;
 }

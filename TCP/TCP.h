@@ -29,7 +29,7 @@
 #define ERR_TCP_RECV			27
 
 //可以修改的接收缓冲区大小，socket最大值，本地端口号，IP地址，网关，子网掩码
-#define RECV_BUFF_LEN 			1460
+#define RECV_BUFF_LEN 			980
 #define IP_LADDR				{192,168,1,100}
 #define GATE_WAY				{192,1,1,1}
 #define	IP_MASK					{255,255,255,0}
