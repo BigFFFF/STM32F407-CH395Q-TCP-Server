@@ -183,7 +183,9 @@ uint8_t init_tcp_server(const tcp_p tcp) {
 void process_tcp_server(const tcp_p tcp) {
 	//INT引脚产生低电平中断以后进去判断
 	if(Query395Interrupt()) {
+		//获取CH395全局中断状态
 		ch395_status = CH395CMDGetGlobIntStatus_ALL();
+		//处理中断
 		handle_INT(tcp);
 	}
 }

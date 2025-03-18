@@ -1,9 +1,10 @@
-# Keil files and directories
-UV4
-UV5
-UVopt
-CMSIS
-RTE
+# Keil files
+DebugConfig/
+*.uvguix.*
+*.scvd
+*.crf
+*.dep
+*.htm
 
 # Object files and binaries
 *.o
